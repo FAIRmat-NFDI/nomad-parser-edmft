@@ -27,7 +27,9 @@ configuration = config.get_plugin_entry_point(
 )
 
 from nomad_simulations.schema_packages.model_method import DFT
-from nomad_parser_edmft.schema_packages.schema_package import DMFT
+from nomad_parser_edmft.schema_packages.schema_package import DMFT, WannierPlusEDMFT
+from simulationworkflowschema import SinglePoint
+from nomad.datamodel.metainfo.workflow import Link, TaskReference
 
 
 def get_files(pattern: str, filepath: str, stripname: str = '', deep: bool = True):
@@ -82,14 +84,8 @@ class In0Parser(TextParser):
         ]
 
 
-class NewParser(MatchingParser):
-    def parse(
-        self,
-        mainfile: str,
-        archive: 'EntryArchive',
-        logger: 'BoundLogger',
-        child_archives: dict[str, 'EntryArchive'] = None,
-    ) -> None:
+class EDMFTParser(MatchingParser):
+    def parse(self, filepath: str, archive: 'EntryArchive', logger: 'BoundLogger'):
         simulation = Simulation()
         archive.data = simulation
 
@@ -97,7 +93,7 @@ class NewParser(MatchingParser):
         simulation.program = program
 
         indmfl_parser = INDMFLParser()
-        indmfl_parser.mainfile = mainfile
+        indmfl_parser.mainfile = filepath
         indmfl_parser.logger = logger
         print(indmfl_parser.get('n_correlated_atoms'))
 
@@ -105,7 +101,7 @@ class NewParser(MatchingParser):
         simulation.model_method.append(dmft)
 
 
-        input_files = get_files(pattern='*.in0', filepath=mainfile)
+        input_files = get_files(pattern='*.in0', filepath=filepath)
         input_file = input_files[0]
         in0_parser = In0Parser()
         in0_parser.mainfile = input_file
@@ -116,4 +112,54 @@ class NewParser(MatchingParser):
             'XC_LDA': 'LDA',
         }
         dft = DFT(jacobs_ladder=jac_ladd_dict.get(in0_parser.get('xc_functional')))
-        print(dft.jacobs_ladder)
+
+        workflow = SinglePoint()
+        archive.workflow2 = workflow
+
+
+        # We try to resolve the entry_id and mainfile of other entries in the upload
+        filepath_stripped = filepath.split('raw/')[-1]
+        metadata = []
+        try:
+            from nomad.app.v1.routers.uploads import get_upload_with_read_access
+            from nomad.datamodel import User
+
+            upload_id = archive.metadata.upload_id
+            upload = get_upload_with_read_access(
+                upload_id=upload_id,
+                user=User.get(user_id=archive.metadata.main_author.user_id),
+            )
+            with upload.entries_metadata() as entries_metadata:
+                metadata.extend(
+                    [[meta.entry_id, meta.mainfile] for meta in entries_metadata]
+                )
+        except Exception:
+            logger.warning(
+                'Could not resolve the entry_id and mainfile of other entries in the upload.'
+            )
+            return
+
+        for entry_id, mainfile in metadata:
+            if mainfile == filepath_stripped:  # we skip the current parsed mainfile
+                continue
+            # We try to load the archive from its context and connect both the CASTEP
+            # and the magres entries
+            try:
+                entry_archive = archive.m_context.load_archive(
+                    entry_id, upload_id, None
+                )
+                program_name = entry_archive.data.program.name
+                if program_name == 'Wannier90':
+                    workflow = WannierPlusEDMFT()
+                    wannier_task = TaskReference(
+                        name='Wannier90 simulation',
+                        task=entry_archive.workflow2
+                    )
+                    workflow.m_add_sub_section(WannierPlusEDMFT.tasks, wannier_task)
+                    edmft_task = TaskReference(
+                        name='eDMFT simulation',
+                        task=archive.workflow2
+                    )
+                    workflow.m_add_sub_section(WannierPlusEDMFT.tasks, edmft_task)
+            except Exception:
+                continue

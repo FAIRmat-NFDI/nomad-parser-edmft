@@ -13,9 +13,7 @@ if TYPE_CHECKING:
     )
 
 from nomad.config import config
-from nomad.datamodel.data import Schema
-from nomad.datamodel.metainfo.annotations import ELNAnnotation, ELNComponentEnum
-from nomad.metainfo import Quantity, SchemaPackage
+from nomad.metainfo import Quantity, SchemaPackage, SubSection, Reference
 
 from nomad_simulations.schema_packages.model_method import ModelMethod
 
@@ -28,22 +26,25 @@ m_package = SchemaPackage()
 
 
 class DMFT(ModelMethod):
-    
+
     hubbard_u = Quantity(
         type=np.float64,
         unit='joule',
         description='Hubbard U',
     )
 
+from simulationworkflowschema import SerialSimulation
 
-class RPASpectra(ModelMethod):
 
-    damping = Quantity(
-        type=np.float64,
-        shape=['*', '*'],
-        unit='joule',
-        description='Damping',
-    )
+class WannierPlusEDMFT(SerialSimulation):
+    """
+    Wannier90 + eDMFT workflow
+    """
+
+    def normalize(self, archive, logger):
+        super().normalize(archive, logger)
+
+
 
 
 
