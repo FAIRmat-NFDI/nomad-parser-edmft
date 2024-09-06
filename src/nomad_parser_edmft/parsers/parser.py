@@ -14,13 +14,10 @@ if TYPE_CHECKING:
     )
 
 from nomad.config import config
-from nomad.parsing.parser import MatchingParser
 from nomad.units import ureg
 
-from nomad.datamodel.metainfo.workflow import Workflow
-
 from nomad_simulations.schema_packages.general import Simulation, Program
-from nomad.parsing.file_parser import Quantity, TextParser, DataTextParser
+from nomad.parsing.file_parser import Quantity, TextParser
 
 configuration = config.get_plugin_entry_point(
     'nomad_parser_edmft.parsers:parser_entry_point'
@@ -84,7 +81,7 @@ class In0Parser(TextParser):
         ]
 
 
-class EDMFTParser(MatchingParser):
+class EDMFTParser:
     def parse(self, filepath: str, archive: 'EntryArchive', logger: 'BoundLogger'):
         simulation = Simulation()
         archive.data = simulation

@@ -41,10 +41,31 @@ class WannierPlusEDMFT(SerialSimulation):
     Wannier90 + eDMFT workflow
     """
 
+    # tasks = SubSection(Tasks, repeats=True)
+
     def normalize(self, archive, logger):
         super().normalize(archive, logger)
 
+        tb_task = self.tasks[0]
+        dmft_task = self.tasks[1]
 
+
+
+class FreeEnergyPath(SerialSimulation):
+
+    free_energy = Quantity(type=np.float64, unit='joule', shape=['*'])
+    positions = Quantity(type=np.float64, unit='meter', shape=['*'])
+
+    def normalize(self, archive, logger):
+        super().normalize(archive, logger)
+
+        free_energy = []
+        positions = []
+        for task in self.tasks:
+            free_energy.append(task.outputs.free_energy.value)
+            positions.append(task.outputs.x.value)
+        self.free_energy = free_energy
+        self.positions = positions
 
 
 

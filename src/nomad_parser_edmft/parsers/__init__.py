@@ -1,5 +1,3 @@
-from typing import Optional
-
 from nomad.config.models.plugins import ParserEntryPoint
 from pydantic import Field
 
@@ -10,13 +8,6 @@ class EDMFTParserEntryPoint(ParserEntryPoint):
         The fully qualified name of the Python class that implements the parser.
         This class must have a function `def parse(self, mainfile, archive, logger)`.
     """
-    )
-    code_name: Optional[str]
-    code_homepage: Optional[str]
-    code_category: Optional[str]
-    metadata: Optional[dict] = Field(
-        description="""
-        Metadata passed to the UI. Deprecated. """
     )
 
     def load(self):
