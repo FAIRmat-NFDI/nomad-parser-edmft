@@ -30,6 +30,6 @@ parser_entry_point = EDMFTParserEntryPoint(
     aliases=['parsers/edmft'],
     description='NOMAD parser for EDMFT.',
     mainfile_name_re='.*\.indmfl',
-    parser_class_name='EDMFTParser',
+    parser_class_name='nomad_parser_edmft.parsers.parser.EDMFTParser',
     level=2,
 )
