@@ -31,4 +31,5 @@ parser_entry_point = EDMFTParserEntryPoint(
     description='NOMAD parser for EDMFT.',
     mainfile_name_re='.*\.indmfl',
     parser_class_name='EDMFTParser',
+    level=2,
 )
